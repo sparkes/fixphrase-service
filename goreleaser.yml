@@ -1,0 +1,51 @@
+version: 2
+project_name: fixphrase
+
+builds:
+  - id: fixphrase
+    main: .
+    binary: fixphrase
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    builds: [fixphrase]
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+# Build and push Docker images to GHCR on tags
+dockers:
+  - image_templates:
+      image_templates:
+        - "{{ .Env.GHCR_IMAGE }}:{{ .Version }}"
+        - "{{ .Env.GHCR_IMAGE }}:latest"
+
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - --platform=linux/amd64,linux/arm64
+      - --label=org.opencontainers.image.title=fixphrase
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.revision={{ .Commit }}
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.source={{ .GitURL }}
+
+release:
+  draft: false
